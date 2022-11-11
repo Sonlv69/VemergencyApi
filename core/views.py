@@ -39,7 +39,7 @@ def sendNotification(request):
     response = messaging.send_multicast(message)
     # Response is a message ID string.
     print('Successfully sent message:', response)
-    return Response(response.status_code)
+    return Response()
 
 
 def subscribe_news(tokens): # tokens is a list of registration tokens
