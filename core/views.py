@@ -5,6 +5,7 @@ from firebase_admin import credentials, firestore, messaging
 import json
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
+from rest_framework import status
 
 cred = credentials.Certificate("mysite/serviceAccountKey.json")
 firebase_admin.initialize_app(cred)
@@ -13,54 +14,76 @@ users_ref = db.collection('shops')
 
 
 def index(request):
-    #accessing our firebase data and storing it in a variable
+    # accessing our firebase data and storing it in a variable
     docs = users_ref.stream()
     list = []
     for doc in docs:
         list.append(doc.to_dict())
     return HttpResponse(json.dumps(list))
 
+
 @api_view(['POST'])
 def sendNotification(request):
     print(request.data)
-    # This registration token comes from the client FCM SDKs.
-    registration_tokens = []
-    transaction = request.data.get('transaction')
-    print(transaction)
-    tokens = request.data.get('tokens')
-    for token in json.loads(tokens):
-        registration_tokens.append(token)
-        print(token)
-    transaction_json = json.loads(transaction)
-    pushTransactionData(transaction_json, request.data.get('shops'))
-    # See documentation on defining a message payload.
-    message = messaging.MulticastMessage(
-        notification=messaging.Notification('New rescue request', "More info"),
-        tokens=registration_tokens,
-    )
+    try:
+        # This registration token comes from the client FCM SDKs.
+        registration_tokens = []
+        transaction = request.data.get('transaction')
+        print(transaction)
+        tokens = request.data.get('tokens')
+        for token in json.loads(tokens):
+            registration_tokens.append(token)
+            print(token)
+        transaction_json = json.loads(transaction)
 
-    # Send a message to the device corresponding to the provided
-    # registration token.
-    response = messaging.send_multicast(message)
-    # Response is a message ID string.
-    print('Successfully sent message:', response)
-    return Response()
+        # push trandaction data
+        pending_transaction_ref = db.collection(u'pending_transactions')
+        pending_document = pending_transaction_ref.document()
+        pushTransactionData(pending_document ,transaction_json, request.data.get('shops'))
+
+        # See documentation on defining a message payload.
+        message = messaging.MulticastMessage(
+            notification=messaging.Notification(
+                'New rescue request', "More info"),
+            tokens=registration_tokens
+        )
+
+        # Send a message to the device corresponding to the provided
+        # registration token.
+        response = messaging.send_multicast(message)
+        # Response is a message ID string.
+        print('Successfully sent message:', response)
+        return Response(pending_document.id, status.HTTP_200_OK)
+    except:
+        return Response(status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-def pushTransactionData(transaction, shops):
-    pending_transaction_ref = db.collection(u'pending_transactions')
-    pending_document = pending_transaction_ref.document()
+def pushTransactionData(pending_document, transaction, shops):
+    
     pending_document.set({
-    u'id': pending_document.id,
-    u'userId': transaction.get('userId'),
-    u'userFullName': transaction.get('userFullName'),
-    u'userPhone': transaction.get('userPhone'),
-    u'service': transaction.get('service'),
-    u'startTime': transaction.get('startTime'),
-    u'content': transaction.get('content'),
-    u'address': transaction.get('address'),
-    u'userLocation': transaction.get('userLocation'),
-    u'userFcmToken': transaction.get('userFcmToken'),
-    u'shops': json.loads(shops),
+        u'id': pending_document.id,
+        u'userId': transaction.get('userId'),
+        u'userFullName': transaction.get('userFullName'),
+        u'userPhone': transaction.get('userPhone'),
+        u'service': transaction.get('service'),
+        u'startTime': transaction.get('startTime'),
+        u'content': transaction.get('content'),
+        u'address': transaction.get('address'),
+        u'userLocation': transaction.get('userLocation'),
+        u'userFcmToken': transaction.get('userFcmToken'),
+        u'shops': json.loads(shops),
     })
-
+    current_transaction_ref = db.collection(u'current_transactions')
+    current_transaction_ref.document(pending_document.id).set({
+        u'id': pending_document.id,
+        u'userId': transaction.get('userId'),
+        u'userFullName': transaction.get('userFullName'),
+        u'userPhone': transaction.get('userPhone'),
+        u'service': transaction.get('service'),
+        u'startTime': transaction.get('startTime'),
+        u'content': transaction.get('content'),
+        u'address': transaction.get('address'),
+        u'userLocation': transaction.get('userLocation'),
+        u'userFcmToken': transaction.get('userFcmToken'),
+        u'shops': json.loads(shops),
+    })
