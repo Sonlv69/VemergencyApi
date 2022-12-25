@@ -63,12 +63,12 @@ def pushTransactionData(pending_document, transaction, shops):
     pending_document.set({
         u'id': pending_document.id,
         u'userId': transaction.get('userId'),
+        u'userImage': transaction.get('userImage'),
         u'userFullName': transaction.get('userFullName'),
         u'userPhone': transaction.get('userPhone'),
         u'service': transaction.get('service'),
         u'startTime': transaction.get('startTime'),
         u'content': transaction.get('content'),
-        u'address': transaction.get('address'),
         u'userLocation': transaction.get('userLocation'),
         u'userFcmToken': transaction.get('userFcmToken'),
         u'shops': json.loads(shops),
@@ -77,13 +77,58 @@ def pushTransactionData(pending_document, transaction, shops):
     current_transaction_ref.document(pending_document.id).set({
         u'id': pending_document.id,
         u'userId': transaction.get('userId'),
+        u'userImage': transaction.get('userImage'),
         u'userFullName': transaction.get('userFullName'),
         u'userPhone': transaction.get('userPhone'),
         u'service': transaction.get('service'),
         u'startTime': transaction.get('startTime'),
         u'content': transaction.get('content'),
-        u'address': transaction.get('address'),
         u'userLocation': transaction.get('userLocation'),
         u'userFcmToken': transaction.get('userFcmToken'),
         u'shops': json.loads(shops),
     })
+
+
+@api_view(['POST'])
+def acceptShopNotification(request):
+    try:
+        # This registration token comes from the client FCM SDKs.
+        fcmToken = request.data.get('token')
+
+        # See documentation on defining a message payload.
+        message = messaging.Message(
+            notification=messaging.Notification(
+                'Congratulations! Your shop is accepted.', "More info"),
+            token = fcmToken
+        )
+
+        # Send a message to the device corresponding to the provided
+        # registration token.
+        response = messaging.send(message)
+        # Response is a message ID string.
+        print('Successfully sent message:', response)
+        return Response(status.HTTP_200_OK)
+    except:
+        return Response(status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['POST'])
+def rejectShopNotification(request):
+    try:
+        # This registration token comes from the client FCM SDKs.
+        fcmToken = request.data.get('token')
+
+        # See documentation on defining a message payload.
+        message = messaging.Message(
+            notification=messaging.Notification(
+                'Your shop is rejected', "More info"),
+            token = fcmToken
+        )
+
+        # Send a message to the device corresponding to the provided
+        # registration token.
+        response = messaging.send(message)
+        # Response is a message ID string.
+        print('Successfully sent message:', response)
+        return Response(status.HTTP_200_OK)
+    except:
+        return Response(status.HTTP_500_INTERNAL_SERVER_ERROR)

@@ -4,5 +4,7 @@ from . import views
 
 urlpatterns = [
     path('', views.index, name='index'),
-    path('noti', views.sendNotification, name='send-notification'),
+    path('noti', views.sendNotification, name='send-rescue-notification'),
+    path('acceptShopNoti', views.acceptShopNotification, name='send-accept-shop-notification'),
+    path('rejectShopNoti', views.rejectShopNotification, name='send-reject-shop-notification'),
 ]
