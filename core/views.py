@@ -88,6 +88,32 @@ def pushTransactionData(pending_document, transaction, shops):
         u'shops': json.loads(shops),
     })
 
+@api_view(['POST'])
+def createShopNotification(request):
+    try:
+        docs = db.collection(u'admins').stream()
+        fcmTokens = []
+        for doc in docs:
+            fcmTokens.append(doc.to_dict()[u'fcmToken'])
+            print(doc.to_dict()[u'fcmToken'])
+
+        # See documentation on defining a message payload.
+        message = messaging.MulticastMessage(
+            notification=messaging.Notification(
+                'New create shop request', "More info"),
+            tokens= fcmTokens
+        )
+
+        # Send a message to the device corresponding to the provided
+        # registration token.
+        response = messaging.send_multicast(message)
+        # Response is a message ID string.
+        print('Successfully sent message:', response)
+        return Response(status.HTTP_200_OK)
+    except:
+        return Response(status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
 
 @api_view(['POST'])
 def acceptShopNotification(request):
